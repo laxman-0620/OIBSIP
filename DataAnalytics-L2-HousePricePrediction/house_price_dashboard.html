@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>House Price Predictor</title>
+<style>
+  :root{
+    --bg0:#0A0E16; --card:rgba(255,255,255,0.045); --card-solid:#111826;
+    --line:rgba(255,255,255,0.09); --ink:#EAF0FA; --muted:#8B96B8;
+    --cyan:#22D3EE; --teal:#14E8B4; --amber:#FBBF24; --indigo:#6366F1; --sky:#38BDF8;
+    --pos:#14E8B4; --neg:#FBBF24;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg0); color:var(--ink);
+    font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px;}
+  code{font-family:'JetBrains Mono',monospace;background:var(--card);padding:1px 6px;border-radius:4px;}
+
+  nav{position:sticky;top:0;z-index:50;background:var(--bg0);border-bottom:1px solid var(--line);}
+  .nav-inner{max-width:1180px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+  .brand{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:16.5px;display:flex;align-items:center;gap:9px;}
+  .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);display:inline-block;}
+  .nav-links{display:flex;gap:16px;flex-wrap:wrap;}
+  .nav-links a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:500;}
+  .nav-links a:hover{color:var(--cyan);}
+
+  header.hero{padding:48px 0 30px;}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan);margin:0 0 10px;font-weight:600;}
+  h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(28px,3.8vw,42px);line-height:1.1;margin:0 0 12px;}
+  .lede{color:var(--muted);font-size:14.5px;line-height:1.6;max-width:620px;margin:0 0 26px;}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  @media (max-width:700px){.kpi-grid{grid-template-columns:repeat(2,1fr);}}
+  .kpi-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 16px;}
+  .kpi-card .num{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;display:block;}
+  .kpi-card .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:3px;display:block;}
+
+  section{padding:36px 0;border-top:1px solid var(--line);}
+  .section-head{margin-bottom:20px;}
+  h2{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:21px;margin:0 0 6px;}
+  .section-note{color:var(--muted);font-size:13.5px;max-width:600px;}
+
+  .predictor-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:24px;}
+  @media (max-width:900px){.predictor-grid{grid-template-columns:1fr;}}
+
+  .form-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;}
+  .form-row{margin-bottom:16px;}
+  .form-row label{
+    display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11.5px;
+    text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:7px;
+  }
+  .form-row label .val{color:var(--cyan);font-weight:700;}
+  .form-row input[type="range"]{
+    width:100%;accent-color:var(--cyan);height:5px;
+  }
+  .form-row select, .form-row .btn-group{
+    width:100%;
+  }
+  .form-row select{
+    background:var(--bg0);border:1px solid var(--line);border-radius:8px;padding:9px 10px;
+    color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:12.5px;
+  }
+  .btn-group{display:flex;gap:6px;}
+  .btn-group button{
+    flex:1;background:var(--bg0);border:1px solid var(--line);color:var(--muted);padding:8px 6px;
+    border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;cursor:pointer;transition:all .15s;
+  }
+  .btn-group button.active{background:var(--cyan);color:#06222A;border-color:transparent;font-weight:700;}
+
+  .predict-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px;display:flex;flex-direction:column;}
+  .predict-label{font-family:'JetBrains Mono',monospace;font-size:11.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px;}
+  .predict-value{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(34px,5vw,48px);color:var(--cyan);margin-bottom:20px;}
+  .breakdown-title{font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:6px 0 12px;}
+  .breakdown-bar{display:flex;height:34px;border-radius:8px;overflow:hidden;margin-bottom:16px;background:var(--bg0);}
+  .breakdown-seg{transition:width .3s ease;}
+  .breakdown-list{display:flex;flex-direction:column;gap:7px;max-height:260px;overflow-y:auto;}
+  .breakdown-item{display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 0;border-bottom:1px solid var(--line);}
+  .breakdown-item .name{display:flex;align-items:center;gap:8px;color:var(--ink);}
+  .breakdown-item .swatch{width:8px;height:8px;border-radius:2px;display:inline-block;}
+  .breakdown-item .amt.pos{color:var(--teal);}
+  .breakdown-item .amt.neg{color:var(--amber);}
+
+  .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media (max-width:860px){.charts-grid{grid-template-columns:1fr;}}
+  .chart-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;}
+  .chart-card h3{font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 12px;font-weight:600;}
+  canvas{max-width:100%;display:block;cursor:crosshair;}
+
+  .tooltip{
+    position:fixed;background:var(--card-solid);color:var(--ink);padding:7px 11px;border-radius:8px;
+    font-family:'JetBrains Mono',monospace;font-size:11.5px;pointer-events:none;z-index:100;opacity:0;
+    transition:opacity .1s;white-space:nowrap;border:1px solid var(--line);
+  }
+
+  table.stat-table{border-collapse:collapse;width:100%;font-family:'JetBrains Mono',monospace;font-size:12px;}
+  table.stat-table th, table.stat-table td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line);}
+  table.stat-table th:first-child, table.stat-table td:first-child{text-align:left;color:var(--ink);font-weight:600;}
+  table.stat-table th{color:var(--muted);font-weight:600;text-transform:uppercase;font-size:10px;letter-spacing:.05em;}
+  table.stat-table tr.best{background:rgba(20,232,180,0.08);}
+
+  .note-card{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:10px;padding:13px 15px;margin-top:14px;font-size:12.5px;color:var(--ink);line-height:1.6;}
+  .note-card b{color:var(--cyan);}
+
+  footer{padding:26px 0 46px;color:var(--muted);font-size:11.5px;font-family:'JetBrains Mono',monospace;text-align:center;}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <div class="brand"><span class="dot"></span>House Price Predictor</div>
+    <div class="nav-links">
+      <a href="#predictor">Predictor</a>
+      <a href="#performance">Performance</a>
+      <a href="#coefficients">Coefficients</a>
+      <a href="#comparison">Model Comparison</a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+  <header class="hero">
+    <p class="eyebrow">Linear Regression · Model Explorer</p>
+    <h1>Adjust the inputs.<br>Watch the price update live.</h1>
+    <p class="lede">This is the actual trained Linear Regression model from the notebook — same intercept, same coefficients. Move any slider or dropdown below and the prediction recalculates using the real fitted equation.</p>
+    <div class="kpi-grid" id="kpiGrid"></div>
+  </header>
+
+  <section id="predictor">
+    <div class="section-head">
+      <h2>Live price predictor</h2>
+      <p class="section-note">Every input below feeds directly into the model's equation: <code>price = intercept + Σ(coefficient × value)</code></p>
+    </div>
+    <div class="predictor-grid">
+      <div class="form-card">
+        <div class="form-row">
+          <label>Area (sq ft) <span class="val" id="areaVal"></span></label>
+          <input type="range" id="area" min="400" max="5000" step="50">
+        </div>
+        <div class="form-row">
+          <label>Age (years) <span class="val" id="ageVal"></span></label>
+          <input type="range" id="age" min="0" max="80" step="1">
+        </div>
+        <div class="form-row">
+          <label>Bedrooms</label>
+          <div class="btn-group" id="bedroomsGroup"></div>
+        </div>
+        <div class="form-row">
+          <label>Bathrooms</label>
+          <div class="btn-group" id="bathroomsGroup"></div>
+        </div>
+        <div class="form-row">
+          <label>Stories</label>
+          <div class="btn-group" id="storiesGroup"></div>
+        </div>
+        <div class="form-row">
+          <label>Parking spaces</label>
+          <div class="btn-group" id="parkingGroup"></div>
+        </div>
+        <div class="form-row">
+          <label>Location</label>
+          <select id="location"></select>
+        </div>
+        <div class="form-row">
+          <label>Main road access</label>
+          <div class="btn-group" id="mainroadGroup"></div>
+        </div>
+        <div class="form-row">
+          <label>Furnishing</label>
+          <select id="furnishing"></select>
+        </div>
+      </div>
+
+      <div class="predict-card">
+        <div class="predict-label">Predicted price</div>
+        <div class="predict-value" id="predictedPrice">$0</div>
+        <div class="breakdown-title">Price build-up</div>
+        <div class="breakdown-bar" id="breakdownBar"></div>
+        <div class="breakdown-list" id="breakdownList"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="performance">
+    <div class="section-head">
+      <h2>Model performance on test data</h2>
+      <p class="section-note">160 held-out houses the model never saw during training.</p>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card"><h3>Actual vs. predicted price</h3><canvas id="scatterChart" width="540" height="320"></canvas></div>
+      <div class="chart-card"><h3>Residuals</h3><canvas id="residualChart" width="540" height="320"></canvas></div>
+    </div>
+  </section>
+
+  <section id="coefficients">
+    <div class="section-head">
+      <h2>Full coefficient breakdown</h2>
+      <p class="section-note">How much each feature moves price, holding everything else constant.</p>
+    </div>
+    <div class="chart-card">
+      <canvas id="coefChart" width="1100" height="360"></canvas>
+    </div>
+  </section>
+
+  <section id="comparison">
+    <div class="section-head">
+      <h2>Model comparison</h2>
+      <p class="section-note">Linear Regression vs. Ridge vs. Lasso, evaluated on the same test set.</p>
+    </div>
+    <div class="chart-card">
+      <table class="stat-table" id="comparisonTable"></table>
+    </div>
+    <div class="note-card" id="comparisonNote"></div>
+  </section>
+
+  <footer>Static dashboard · runs entirely in your browser · predictions computed from the real trained model coefficients, no server required</footer>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const D = {"metrics": {"mse": 449103956.7540924, "rmse": 21192.072969723664, "r2": 0.8839014896900546, "n_train": 640, "n_test": 160}, "coefficients": {"intercept": 116589.76299738119, "features": ["Area", "Bedrooms", "Bathrooms", "Stories", "Age", "Parking", "Location_Rural", "Location_Suburb", "Location_Uptown", "MainRoad_Yes", "Furnishing_Semi-Furnished", "Furnishing_Unfurnished"], "values": [84.62233866545863, 7988.492525956209, 5115.056824509298, 6063.769947560824, -881.2836080450624, 2791.4210447383985, -74767.90362995445, -43455.95069876599, -23946.113922775003, 7978.454643134964, -6315.855722395016, -9610.571098864802]}, "scatter": {"actual": [328897.0, 365743.0, 259510.0, 147112.0, 264893.0, 314301.0, 185246.0, 299874.0, 176906.0, 310854.0, 269175.0, 200938.0, 202124.0, 305403.0, 351017.0, 203024.0, 242793.0, 211101.0, 363756.0, 146367.0, 264748.0, 249244.0, 258344.0, 128491.0, 373706.0, 221561.0, 231551.0, 330578.0, 262426.0, 273962.0, 308159.0, 245466.0, 234912.0, 275704.0, 322066.0, 190515.0, 189783.0, 216966.0, 218874.0, 194589.0, 177479.0, 181374.0, 293873.0, 429833.0, 226004.0, 214004.0, 358133.0, 203790.0, 310025.0, 258209.0, 230673.0, 233530.0, 264309.0, 261782.0, 262808.0, 302201.0, 275089.0, 222141.0, 384815.0, 229094.0, 260622.0, 316541.0, 309086.0, 369314.0, 251520.0, 314032.0, 174242.0, 337328.0, 215562.0, 254042.0, 235509.0, 338817.0, 363055.0, 185419.0, 367845.0, 221752.0, 244459.0, 167974.0, 272524.0, 247786.0, 343651.0, 250147.0, 309773.0, 248673.0, 289823.0, 311021.0, 347058.0, 292902.0, 317454.0, 260467.0, 299682.0, 294590.0, 245326.0, 391152.0, 322450.0, 144119.0, 303585.0, 245600.0, 344917.0, 259645.0, 216209.0, 226841.0, 284597.0, 282906.0, 271361.0, 182206.0, 274544.0, 307059.0, 310409.0, 308157.0, 260662.0, 290175.0, 217233.0, 213659.0, 239967.0, 196879.0, 253342.0, 294092.0, 484673.0, 377665.0, 320625.0, 238265.0, 370707.0, 227548.0, 322184.0, 174040.0, 324909.0, 241909.0, 402751.0, 344927.0, 232928.0, 312429.0, 297718.0, 286819.0, 290756.0, 234998.0, 228151.0, 374405.0, 332213.0, 347345.0, 330014.0, 224097.0, 273068.0, 238534.0, 306346.0, 232674.0, 243586.0, 337911.0, 279383.0, 195453.0, 264660.0, 293169.0, 314007.0, 223289.0, 365680.0, 198929.0, 254919.0, 310142.0, 273564.0, 406059.0], "predicted": [331750.2794961644, 367946.5217918068, 258021.22655516808, 155199.07746998363, 256567.15211419686, 355915.2854993885, 194051.39725739736, 246270.6831485862, 225861.0598141342, 266357.8778443518, 284629.6486722819, 201658.20126270107, 194043.19885629075, 307250.42170141847, 329210.11815612204, 254357.8875825117, 263505.6063685048, 206005.3171339385, 364079.18415373034, 143218.8988402825, 315379.89173638367, 233813.6432340279, 274751.4216249066, 120480.1997469557, 350112.1455860395, 227280.06851098203, 235824.94074459057, 305402.6417070446, 280132.12391769374, 288461.8150450222, 326631.1407613633, 223937.6014520642, 228554.94680858636, 259846.07881143436, 293802.89496749645, 220599.10490927196, 189035.3242395796, 242978.3872492665, 241749.81154139596, 198205.47965316084, 201289.16492799306, 166644.536651024, 325169.5859152974, 391298.5509995966, 244703.2944778705, 192631.44696714185, 340521.84494105284, 235308.61175788008, 331993.1223109457, 274808.5115691386, 247052.34984228498, 241258.08527887345, 273095.32346064935, 243523.7566254222, 293268.60608537693, 286796.179553164, 293966.8038822838, 205081.51202682414, 331756.1823031184, 269136.7135016907, 262974.735276054, 347777.59528079233, 325717.5271835014, 349753.8799447423, 249370.1203993672, 295784.6978576587, 191071.59265148436, 354243.09191536764, 237372.17923982424, 292888.18377843656, 202168.31655821507, 347807.8303435984, 326251.56235513196, 212832.59818139498, 356146.05351253145, 210695.0682452877, 249161.50189347146, 179284.92227340548, 303451.27872270346, 223844.2911957786, 310200.7316922337, 278465.13699229853, 308306.5650492762, 282828.68408321333, 268878.12358824693, 322223.9014359084, 337999.12532405276, 316055.9579141061, 323207.5784395647, 256399.47027082567, 317981.8126081801, 273322.23729612736, 239094.27494991996, 387183.7371897205, 313788.62064112513, 134757.25884626352, 290074.31596968905, 231072.44792905854, 350324.9933092219, 245487.92929710745, 234923.24490070634, 220361.9029070931, 264600.9236512083, 298423.7247218504, 242771.61664600382, 179077.6503632745, 279776.818797529, 325713.40733510914, 295964.49569311633, 303808.40581831883, 268525.0575668892, 263908.6280875241, 209622.79374966532, 231053.6980102127, 241038.92570801888, 181343.72233768413, 276887.44589474646, 320008.59999372135, 492349.2810681012, 362393.24131442746, 323873.28207467875, 269417.3606369704, 367834.54127488355, 263782.8642642808, 304384.85437786346, 178718.64762098677, 306799.268852032, 253946.5644999933, 377474.9592494116, 312374.9101115378, 242357.49724446912, 307381.0474738803, 284852.0530884218, 280876.20233758865, 317494.47031447256, 239953.82798636824, 255765.0807304611, 368393.10207049816, 310804.63978144457, 339222.08771559456, 360115.5286844877, 260418.51293602487, 277915.2896441885, 267490.8188367653, 322092.012864189, 243815.51919606613, 199192.59673581578, 335729.97066705825, 295314.87903725327, 216532.8493828864, 241834.6111389253, 301693.2128092516, 340878.0592195048, 211376.3700030187, 362527.582544566, 185902.65824558263, 259516.00237563698, 310296.43874155055, 250786.8606252249, 391624.3726825119]}, "residuals": {"predicted": [331750.2794961644, 367946.5217918068, 258021.22655516808, 155199.07746998363, 256567.15211419686, 355915.2854993885, 194051.39725739736, 246270.6831485862, 225861.0598141342, 266357.8778443518, 284629.6486722819, 201658.20126270107, 194043.19885629075, 307250.42170141847, 329210.11815612204, 254357.8875825117, 263505.6063685048, 206005.3171339385, 364079.18415373034, 143218.8988402825, 315379.89173638367, 233813.6432340279, 274751.4216249066, 120480.1997469557, 350112.1455860395, 227280.06851098203, 235824.94074459057, 305402.6417070446, 280132.12391769374, 288461.8150450222, 326631.1407613633, 223937.6014520642, 228554.94680858636, 259846.07881143436, 293802.89496749645, 220599.10490927196, 189035.3242395796, 242978.3872492665, 241749.81154139596, 198205.47965316084, 201289.16492799306, 166644.536651024, 325169.5859152974, 391298.5509995966, 244703.2944778705, 192631.44696714185, 340521.84494105284, 235308.61175788008, 331993.1223109457, 274808.5115691386, 247052.34984228498, 241258.08527887345, 273095.32346064935, 243523.7566254222, 293268.60608537693, 286796.179553164, 293966.8038822838, 205081.51202682414, 331756.1823031184, 269136.7135016907, 262974.735276054, 347777.59528079233, 325717.5271835014, 349753.8799447423, 249370.1203993672, 295784.6978576587, 191071.59265148436, 354243.09191536764, 237372.17923982424, 292888.18377843656, 202168.31655821507, 347807.8303435984, 326251.56235513196, 212832.59818139498, 356146.05351253145, 210695.0682452877, 249161.50189347146, 179284.92227340548, 303451.27872270346, 223844.2911957786, 310200.7316922337, 278465.13699229853, 308306.5650492762, 282828.68408321333, 268878.12358824693, 322223.9014359084, 337999.12532405276, 316055.9579141061, 323207.5784395647, 256399.47027082567, 317981.8126081801, 273322.23729612736, 239094.27494991996, 387183.7371897205, 313788.62064112513, 134757.25884626352, 290074.31596968905, 231072.44792905854, 350324.9933092219, 245487.92929710745, 234923.24490070634, 220361.9029070931, 264600.9236512083, 298423.7247218504, 242771.61664600382, 179077.6503632745, 279776.818797529, 325713.40733510914, 295964.49569311633, 303808.40581831883, 268525.0575668892, 263908.6280875241, 209622.79374966532, 231053.6980102127, 241038.92570801888, 181343.72233768413, 276887.44589474646, 320008.59999372135, 492349.2810681012, 362393.24131442746, 323873.28207467875, 269417.3606369704, 367834.54127488355, 263782.8642642808, 304384.85437786346, 178718.64762098677, 306799.268852032, 253946.5644999933, 377474.9592494116, 312374.9101115378, 242357.49724446912, 307381.0474738803, 284852.0530884218, 280876.20233758865, 317494.47031447256, 239953.82798636824, 255765.0807304611, 368393.10207049816, 310804.63978144457, 339222.08771559456, 360115.5286844877, 260418.51293602487, 277915.2896441885, 267490.8188367653, 322092.012864189, 243815.51919606613, 199192.59673581578, 335729.97066705825, 295314.87903725327, 216532.8493828864, 241834.6111389253, 301693.2128092516, 340878.0592195048, 211376.3700030187, 362527.582544566, 185902.65824558263, 259516.00237563698, 310296.43874155055, 250786.8606252249, 391624.3726825119], "residual": [-2853.2794961644104, -2203.5217918067938, 1488.7734448319243, -8087.077469983633, 8325.847885803145, -41614.28549938853, -8805.397257397359, 53603.31685141381, -48955.059814134205, 44496.12215564819, -15454.64867228188, -720.2012627010699, 8080.80114370925, -1847.4217014184687, 21806.881843877956, -51333.8875825117, -20712.606368504814, 5095.682866061514, -323.18415373034077, 3148.1011597175093, -50631.891736383666, 15430.356765972101, -16407.421624906594, 8010.800253044305, 23593.85441396048, -5719.068510982033, -4273.940744590567, 25175.35829295538, -17706.123917693738, -14499.815045022173, -18472.14076136332, 21528.398547935794, 6357.053191413637, 15857.92118856564, 28263.105032503547, -30084.104909271962, 747.6757604203885, -26012.387249266496, -22875.81154139596, -3616.4796531608445, -23810.164927993057, 14729.463348975987, -31296.585915297386, 38534.4490004034, -18699.294477870513, 21372.55303285815, 17611.15505894716, -31518.611757880077, -21968.122310945706, -16599.511569138616, -16379.34984228498, -7728.085278873448, -8786.32346064935, 18258.24337457781, -30460.60608537693, 15404.820446836005, -18877.8038822838, 17059.487973175856, 53058.8176968816, -40042.71350169071, -2352.735276054009, -31236.59528079233, -16631.5271835014, 19560.120055257692, 2149.8796006327902, 18247.302142341272, -16829.59265148436, -16915.091915367637, -21810.17923982424, -38846.18377843656, 33340.68344178493, -8990.830343598383, 36803.43764486804, -27413.598181394977, 11698.946487468551, 11056.931754712306, -4702.501893471461, -11310.922273405478, -30927.278722703457, 23941.708804221387, 33450.268307766295, -28318.136992298532, 1466.4349507237785, -34155.68408321333, 20944.876411753066, -11202.901435908396, 9058.874675947241, -23153.957914106082, -5753.578439564677, 4067.5297291743336, -18299.812608180102, 21267.762703872635, 6231.725050080044, 3968.262810279499, 8661.379358874867, 9361.741153736482, 13510.68403031095, 14527.552070941456, -5407.993309221929, 14157.070702892554, -18714.24490070634, 6479.097092906886, 19996.076348791714, -15517.72472185042, 28589.383353996178, 3128.3496367254993, -5232.818797528977, -18654.407335109136, 14444.504306883668, 4348.594181681168, -7863.0575668892125, 26266.371912475908, 7610.206250334682, -17394.698010212713, -1071.9257080188836, 15535.277662315872, -23545.44589474646, -25916.59999372135, -7676.281068101176, 15271.758685572539, -3248.2820746787474, -31152.360636970378, 2872.4587251164485, -36234.864264280826, 17799.145622136537, -4678.647620986769, 18109.731147967977, -12037.564499993314, 25276.040750588407, 32552.089888462215, -9429.497244469123, 5047.952526119712, 12865.946911578183, 5942.797662411351, -26738.470314472564, -4955.82798636824, -27614.080730461108, 6011.897929501836, 21408.360218555434, 8122.912284405436, -30101.528684487683, -36321.51293602487, -4847.28964418848, -28956.818836765306, -15746.01286418899, -11141.519196066132, 44393.40326418422, 2181.0293329417473, -15931.879037253268, -21079.8493828864, 22825.388861074694, -8524.212809251621, -26871.059219504823, 11912.629996981297, 3152.4174554339843, 13026.341754417372, -4597.002375636977, -154.438741550548, 22777.139374775114, 14434.627317488077]}, "comparison": [{"Model": "Linear Regression", "MSE": 449103956.7540924, "RMSE": 21192.072969723664, "R2": 0.8839014896900546}, {"Model": "Ridge", "MSE": 449249607.17435455, "RMSE": 21195.50912750988, "R2": 0.8838638373902603}, {"Model": "Lasso", "MSE": 450150217.16837245, "RMSE": 21216.743792777732, "R2": 0.8836310194043503}], "feature_stats": {"Area": {"min": 400.0, "max": 4112.0, "mean": 1795.28}, "Bedrooms": {"min": 1.0, "max": 5.0, "mean": 3.10625}, "Bathrooms": {"min": 1.0, "max": 5.0, "mean": 2.735}, "Stories": {"min": 1.0, "max": 3.0, "mean": 1.725}, "Age": {"min": 0.0, "max": 80.0, "mean": 14.5575}, "Parking": {"min": 0.0, "max": 3.0, "mean": 1.2675}, "Location_Rural": {"min": 0.0, "max": 1.0, "mean": 0.2}, "Location_Suburb": {"min": 0.0, "max": 1.0, "mean": 0.37}, "Location_Uptown": {"min": 0.0, "max": 1.0, "mean": 0.175}, "MainRoad_Yes": {"min": 0.0, "max": 1.0, "mean": 0.71}, "Furnishing_Semi-Furnished": {"min": 0.0, "max": 1.0, "mean": 0.41625}, "Furnishing_Unfurnished": {"min": 0.0, "max": 1.0, "mean": 0.325}}, "categorical_options": {"Location": ["Downtown", "Rural", "Suburb", "Uptown"], "MainRoad": ["No", "Yes"], "Furnishing": ["Furnished", "Semi-Furnished", "Unfurnished"]}};
+const MUTED = "#8B96B8", GRID = "rgba(255,255,255,0.08)", INK = "#EAF0FA";
+const palette = ["#22D3EE","#14E8B4","#FBBF24","#6366F1","#38BDF8","#5EEAD4","#F59E0B","#818CF8"];
+const tooltipEl = document.getElementById('tooltip');
+
+function showTooltip(x,y,text){ tooltipEl.textContent=text; tooltipEl.style.left=(x+14)+"px"; tooltipEl.style.top=(y-10)+"px"; tooltipEl.style.opacity=1; }
+function hideTooltip(){ tooltipEl.style.opacity=0; }
+function money(v){ return "$"+Math.round(v).toLocaleString(); }
+
+// ---------------- KPI cards ----------------
+document.getElementById('kpiGrid').innerHTML = `
+  <div class="kpi-card"><span class="num">${D.metrics.r2.toFixed(3)}</span><span class="lbl">R² score</span></div>
+  <div class="kpi-card"><span class="num">${money(D.metrics.rmse)}</span><span class="lbl">RMSE</span></div>
+  <div class="kpi-card"><span class="num">${D.metrics.n_train}</span><span class="lbl">Training rows</span></div>
+  <div class="kpi-card"><span class="num">${D.metrics.n_test}</span><span class="lbl">Test rows</span></div>
+`;
+
+// ---------------- predictor form setup ----------------
+const state = { Area:1800, Age:15, Bedrooms:3, Bathrooms:2, Stories:1, Parking:1, Location:"Suburb", MainRoad:"Yes", Furnishing:"Semi-Furnished" };
+
+function buildBtnGroup(id, options, key){
+  const el = document.getElementById(id);
+  el.innerHTML = options.map(o=>`<button data-val="${o}" class="${state[key]==o?'active':''}">${o}</button>`).join('');
+  el.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      state[key] = isNaN(btn.dataset.val) ? btn.dataset.val : Number(btn.dataset.val);
+      el.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      updatePrediction();
+    });
+  });
+}
+buildBtnGroup('bedroomsGroup', [1,2,3,4,5], 'Bedrooms');
+buildBtnGroup('bathroomsGroup', [1,2,3,4], 'Bathrooms');
+buildBtnGroup('storiesGroup', [1,2,3], 'Stories');
+buildBtnGroup('parkingGroup', [0,1,2,3], 'Parking');
+buildBtnGroup('mainroadGroup', D.categorical_options.MainRoad, 'MainRoad');
+
+function buildSelect(id, options, key){
+  const el = document.getElementById(id);
+  el.innerHTML = options.map(o=>`<option value="${o}" ${state[key]===o?'selected':''}>${o}</option>`).join('');
+  el.addEventListener('change', ()=>{ state[key]=el.value; updatePrediction(); });
+}
+buildSelect('location', D.categorical_options.Location, 'Location');
+buildSelect('furnishing', D.categorical_options.Furnishing, 'Furnishing');
+
+document.getElementById('area').value = state.Area;
+document.getElementById('age').value = state.Age;
+document.getElementById('area').addEventListener('input', e=>{ state.Area=Number(e.target.value); document.getElementById('areaVal').textContent=state.Area.toLocaleString()+" sqft"; updatePrediction(); });
+document.getElementById('age').addEventListener('input', e=>{ state.Age=Number(e.target.value); document.getElementById('ageVal').textContent=state.Age+" yrs"; updatePrediction(); });
+document.getElementById('areaVal').textContent = state.Area.toLocaleString()+" sqft";
+document.getElementById('ageVal').textContent = state.Age+" yrs";
+
+// ---------------- encode + predict ----------------
+function encode(){
+  const f = D.coefficients.features;
+  const vec = {};
+  f.forEach(name=>{
+    if(name === "Area") vec[name] = state.Area;
+    else if(name === "Bedrooms") vec[name] = state.Bedrooms;
+    else if(name === "Bathrooms") vec[name] = state.Bathrooms;
+    else if(name === "Stories") vec[name] = state.Stories;
+    else if(name === "Age") vec[name] = state.Age;
+    else if(name === "Parking") vec[name] = state.Parking;
+    else if(name === "Location_Rural") vec[name] = state.Location === "Rural" ? 1 : 0;
+    else if(name === "Location_Suburb") vec[name] = state.Location === "Suburb" ? 1 : 0;
+    else if(name === "Location_Uptown") vec[name] = state.Location === "Uptown" ? 1 : 0;
+    else if(name === "MainRoad_Yes") vec[name] = state.MainRoad === "Yes" ? 1 : 0;
+    else if(name === "Furnishing_Semi-Furnished") vec[name] = state.Furnishing === "Semi-Furnished" ? 1 : 0;
+    else if(name === "Furnishing_Unfurnished") vec[name] = state.Furnishing === "Unfurnished" ? 1 : 0;
+    else vec[name] = 0;
+  });
+  return vec;
+}
+
+function updatePrediction(){
+  const vec = encode();
+  const feats = D.coefficients.features;
+  const coefs = D.coefficients.values;
+  const contributions = feats.map((name,i)=>({ name, contribution: coefs[i]*vec[name] }));
+  const total = D.coefficients.intercept + contributions.reduce((s,c)=>s+c.contribution,0);
+
+  document.getElementById('predictedPrice').textContent = money(Math.max(total,0));
+
+  // breakdown: intercept + non-zero contributions, sorted by magnitude
+  const parts = [{name:"Base value (intercept)", contribution: D.coefficients.intercept}, ...contributions.filter(c=>Math.abs(c.contribution) > 1)];
+  parts.sort((a,b)=> Math.abs(b.contribution) - Math.abs(a.contribution));
+
+  const barTotal = parts.reduce((s,p)=>s+Math.max(p.contribution,0), 0) || 1;
+  document.getElementById('breakdownBar').innerHTML = parts.filter(p=>p.contribution>0).map((p,i)=>{
+    const pct = (p.contribution/barTotal*100).toFixed(1);
+    return `<div class="breakdown-seg" style="width:${pct}%;background:${palette[i%palette.length]}" title="${p.name}"></div>`;
+  }).join('');
+
+  document.getElementById('breakdownList').innerHTML = parts.map((p,i)=>{
+    const cls = p.contribution >= 0 ? 'pos' : 'neg';
+    const sign = p.contribution >= 0 ? '+' : '−';
+    return `<div class="breakdown-item">
+      <span class="name"><span class="swatch" style="background:${palette[i%palette.length]}"></span>${p.name.replace('_',': ')}</span>
+      <span class="amt ${cls}">${sign}${money(Math.abs(p.contribution))}</span>
+    </div>`;
+  }).join('');
+}
+updatePrediction();
+
+// ---------------- canvas chart helpers ----------------
+function setupCanvas(canvas){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const cssW = rect.width || canvas.width;
+  canvas.width = Math.round(cssW*dpr);
+  canvas.height = Math.round(canvas.getAttribute('height')*dpr);
+  canvas.style.width = cssW+"px"; canvas.style.height = canvas.getAttribute('height')+"px";
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr,dpr);
+  return {ctx, w:cssW, h:parseFloat(canvas.getAttribute('height'))};
+}
+
+function drawScatter(canvasId, xs, ys, color){
+  const canvas = document.getElementById(canvasId);
+  const {ctx,w,h} = setupCanvas(canvas);
+  const padL=54, padR=14, padT=14, padB=36;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  const allX=[...xs], allY=[...ys];
+  const minV = Math.min(...allX, ...allY)*0.95, maxV = Math.max(...allX, ...allY)*1.05;
+  const scale = v => padT + plotH - ((v-minV)/(maxV-minV))*plotH;
+  const scaleX = v => padL + ((v-minV)/(maxV-minV))*plotW;
+  ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle=GRID; ctx.fillStyle=MUTED; ctx.font="9.5px monospace"; ctx.textAlign="right"; ctx.textBaseline="middle";
+  for(let i=0;i<=4;i++){
+    const v = minV + (maxV-minV)*i/4;
+    const y = scale(v);
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(w-padR,y); ctx.stroke();
+    ctx.fillText("$"+(v/1000).toFixed(0)+"k", padL-7, y);
+  }
+  // diagonal
+  ctx.strokeStyle = "#F59E0B55"; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(scaleX(minV), scale(minV)); ctx.lineTo(scaleX(maxV), scale(maxV)); ctx.stroke();
+  ctx.setLineDash([]);
+  const pts=[];
+  xs.forEach((x,i)=>{
+    const px = scaleX(x), py = scale(ys[i]);
+    ctx.beginPath(); ctx.arc(px,py,3,0,Math.PI*2); ctx.fillStyle=color+"AA"; ctx.fill();
+    pts.push({x:px,y:py,actual:x,pred:ys[i]});
+  });
+  canvas.onmousemove = e=>{
+    const rect=canvas.getBoundingClientRect(); const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+    let nearest=null, dist=Infinity;
+    pts.forEach(p=>{ const d=Math.hypot(p.x-mx,p.y-my); if(d<dist){dist=d;nearest=p;} });
+    if(dist<15) showTooltip(e.clientX,e.clientY, `Actual: ${money(nearest.actual)} · Predicted: ${money(nearest.pred)}`);
+    else hideTooltip();
+  };
+  canvas.onmouseleave = hideTooltip;
+}
+
+function drawResidualScatter(canvasId, xs, ys, color){
+  const canvas = document.getElementById(canvasId);
+  const {ctx,w,h} = setupCanvas(canvas);
+  const padL=54, padR=14, padT=14, padB=36;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  const minX=Math.min(...xs), maxX=Math.max(...xs);
+  const maxAbsY = Math.max(...ys.map(Math.abs))*1.15;
+  const scaleX = v => padL + ((v-minX)/(maxX-minX))*plotW;
+  const scaleY = v => padT + plotH/2 - (v/maxAbsY)*(plotH/2);
+  ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle=GRID; ctx.fillStyle=MUTED; ctx.font="9.5px monospace"; ctx.textAlign="right"; ctx.textBaseline="middle";
+  for(let i=-2;i<=2;i++){
+    const v = maxAbsY*i/2, y=scaleY(v);
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(w-padR,y); ctx.stroke();
+    ctx.fillText((v/1000).toFixed(0)+"k", padL-7, y);
+  }
+  ctx.strokeStyle="#F59E0B"; ctx.beginPath(); ctx.moveTo(padL, scaleY(0)); ctx.lineTo(w-padR, scaleY(0)); ctx.stroke();
+  const pts=[];
+  xs.forEach((x,i)=>{
+    const px=scaleX(x), py=scaleY(ys[i]);
+    ctx.beginPath(); ctx.arc(px,py,3,0,Math.PI*2); ctx.fillStyle=color+"AA"; ctx.fill();
+    pts.push({x:px,y:py,pred:x,residual:ys[i]});
+  });
+  canvas.onmousemove = e=>{
+    const rect=canvas.getBoundingClientRect(); const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+    let nearest=null, dist=Infinity;
+    pts.forEach(p=>{ const d=Math.hypot(p.x-mx,p.y-my); if(d<dist){dist=d;nearest=p;} });
+    if(dist<15) showTooltip(e.clientX,e.clientY, `Predicted: ${money(nearest.pred)} · Residual: ${nearest.residual>=0?'+':''}${money(nearest.residual)}`);
+    else hideTooltip();
+  };
+  canvas.onmouseleave = hideTooltip;
+}
+
+function drawCoefChart(canvasId, labels, values){
+  const canvas = document.getElementById(canvasId);
+  const {ctx,w,h} = setupCanvas(canvas);
+  const padL=170, padR=70, padT=10, padB=10;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  const maxAbs = Math.max(...values.map(Math.abs))*1.1;
+  ctx.clearRect(0,0,w,h);
+  const slot = plotH/labels.length;
+  const barH = Math.min(slot*0.55, 26);
+  const zeroX = padL + plotW/2;
+  ctx.strokeStyle=GRID; ctx.beginPath(); ctx.moveTo(zeroX,padT); ctx.lineTo(zeroX,padT+plotH); ctx.stroke();
+  const bars=[];
+  ctx.font="10.5px monospace";
+  labels.forEach((l,i)=>{
+    const y = padT + slot*i + (slot-barH)/2;
+    const v = values[i];
+    const barLen = (Math.abs(v)/maxAbs)*(plotW/2);
+    const x = v>=0 ? zeroX : zeroX-barLen;
+    ctx.fillStyle = MUTED; ctx.textAlign="right"; ctx.textBaseline="middle";
+    ctx.fillText(l, padL-10, y+barH/2);
+    ctx.fillStyle = v>=0 ? "#14E8B4" : "#FBBF24";
+    ctx.fillRect(x,y,barLen,barH);
+    ctx.fillStyle = INK; ctx.textAlign = v>=0 ? "left":"right";
+    ctx.fillText((v>=0?"+":"")+Math.round(v).toLocaleString(), v>=0? zeroX+barLen+6 : zeroX-barLen-6, y+barH/2);
+    bars.push({x:Math.min(x,zeroX), y, w:barLen, h:barH, l, v});
+  });
+  canvas.onmousemove = e=>{
+    const rect=canvas.getBoundingClientRect(); const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+    const hit = bars.find(b=> mx>=b.x && mx<=b.x+b.w && my>=b.y && my<=b.y+b.h);
+    if(hit) showTooltip(e.clientX,e.clientY, `${hit.l}: ${hit.v>=0?'+':''}${money(hit.v)} per unit`);
+    else hideTooltip();
+  };
+  canvas.onmouseleave = hideTooltip;
+}
+
+drawScatter('scatterChart', D.scatter.actual, D.scatter.predicted, "#22D3EE");
+drawResidualScatter('residualChart', D.residuals.predicted, D.residuals.residual, "#14E8B4");
+drawCoefChart('coefChart', D.coefficients.features, D.coefficients.values);
+
+// ---------------- comparison table ----------------
+const bestR2 = Math.max(...D.comparison.map(r=>r.R2));
+document.getElementById('comparisonTable').innerHTML =
+  '<tr><th>Model</th><th>MSE</th><th>RMSE</th><th>R²</th></tr>' +
+  D.comparison.map(r=>`<tr class="${r.R2===bestR2?'best':''}"><td>${r.Model}</td><td>${Math.round(r.MSE).toLocaleString()}</td><td>${money(r.RMSE)}</td><td>${r.R2.toFixed(4)}</td></tr>`).join('');
+const bestModel = D.comparison.find(r=>r.R2===bestR2).Model;
+document.getElementById('comparisonNote').innerHTML = `<b>${bestModel}</b> performs best on this test set (highest R², lowest error). If Ridge/Lasso don't clearly beat plain Linear Regression, it suggests multicollinearity isn't badly hurting the baseline model.`;
+
+document.querySelectorAll('.nav-links a').forEach(a=>{
+  a.addEventListener('click', e=>{
+    e.preventDefault();
+    document.querySelector(a.getAttribute('href')).scrollIntoView({behavior:'smooth', block:'start'});
+  });
+});
+</script>
+</body>
+</html>
